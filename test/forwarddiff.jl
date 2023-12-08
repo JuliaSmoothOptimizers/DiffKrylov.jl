@@ -9,7 +9,7 @@ function sparse_laplacian(n :: Int=16; FC=Float64)
 end
 A, b = sparse_laplacian(4, FC=Float64)
 @testset "$solver" for solver = (Krylov.cg, Krylov.gmres, Krylov.bicgstab)
-    x, stats = cg(A,b)
+    x, stats = solver(A,b)
 
     # A passive, b active
     # Sparse
