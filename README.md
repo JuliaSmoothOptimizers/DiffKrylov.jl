@@ -7,4 +7,4 @@ DiffKrylov provides a differentiable API for [Krylov.jl](https://github.com/Juli
 [codecov-latest-url]: https://codecov.io/github/JuliaSmoothOptimizers/DiffKrylov.jl?branch=main
 
 [build-url]: https://github.com/JuliaSmoothOptimizers/DiffKrylov.jl/actions?query=workflow
-[build-latest-img]: https://github.com/JuliaSmoothOptimizers/DiffKrylov.jl/workflows/Run%20tests/badge.svg?branch=main
+[build-latest-img]: https://github.com/JuliaSmoothOptimizers/DiffKrylov.jl/workflows/CI/badge.svg?branch=main
