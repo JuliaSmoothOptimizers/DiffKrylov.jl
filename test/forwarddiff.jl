@@ -9,7 +9,7 @@ function sparse_laplacian(n :: Int=16; FC=Float64)
 end
 A, b = sparse_laplacian(4, FC=Float64)
 @testset "$solver" for solver = (Krylov.cg, Krylov.gmres, Krylov.bicgstab)
-    x, stats = solver(A,b)
+    x, stats = solver(A,b; atol=atol, rtol=rtol)
 
     # A passive, b active
     # Sparse
@@ -36,11 +36,11 @@ A, b = sparse_laplacian(4, FC=Float64)
 
     # A active, b passive
     # Sparse
-    @testset "A sparse active, b active" begin
+    @testset "A sparse active, b passive" begin
         check_derivatives_and_values_active_passive(solver, A, b, x)
     end
     # Dense
-    @testset "A dense active, b active" begin
+    @testset "A dense active, b passive" begin
         check_derivatives_and_values_active_passive(solver, Matrix(A), b, x)
     end
 end
