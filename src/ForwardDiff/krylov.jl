@@ -1,77 +1,99 @@
 import ForwardDiff: Dual, Partials, partials, value
 
-for solver in (:cg, :gmres, :bicgstab)
-@eval begin
-    function Krylov.$solver(_A::SparseMatrixCSC{V, Int64}, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N}
-    A = SparseMatrixCSC(_A.m, _A.n, _A.colptr, _A.rowval, value.(_A.nzval))
-    b = value.(_b)
-    m = length(b)
-    dbs = Matrix{V}(undef, m, N)
-    for i in 1:m
-        dbs[i,:] = partials(_b[i])
-    end
-    x, stats = $solver(A,b; options...)
-    dxs = Matrix{Float64}(undef, m, N)
-    px = Vector{Partials{N,V}}(undef, m)
+_matrix_values(A::SparseMatrixCSC{Dual{T, V, N}, IT}) where {T, V, N, IT} = SparseMatrixCSC(A.m, A.n, A.colptr, A.rowval, value.(A.nzval))
+_matrix_values(A::Matrix{Dual{T, V, N}}) where {T, V, N} = Matrix{V}(value.(A))
+function _matrix_partials(A::SparseMatrixCSC{Dual{T, V, N}, IT}) where {T, V, N, IT}
+    dAs = Vector{SparseMatrixCSC{Float64, Int64}}(undef, N)
     for i in 1:N
-        nb = dbs[:,i]
-        dx, dstats = $solver(A,nb; options...)
-        dxs[:,i] = dx
+        dAs[i] = SparseMatrixCSC(A.m, A.n, A.colptr, A.rowval, partials.(A.nzval, i))
     end
-    for i in 1:m
-        px[i] = Partials{N,V}(Tuple(dxs[i,j] for j in 1:N))
-    end
-    duals = Dual{T,V,N}.(x, px)
-    return (duals, stats)
-    end
-
-    function Krylov.$solver(A::Matrix{V}, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N}
-    b = value.(_b)
-    m = length(b)
-    dbs = Matrix{V}(undef, m, N)
-    for i in 1:m
-        dbs[i,:] = partials(_b[i])
-    end
-    x, stats = $solver(A,b; options...)
-    dxs = Matrix{Float64}(undef, m, N)
-    px = Vector{Partials{N,V}}(undef, m)
+    return dAs
+end
+function _matrix_partials(A::Matrix{Dual{T, V, N}}) where {T, V, N}
+    dAs = Vector{Matrix{V}}(undef, N)
     for i in 1:N
-        nb = dbs[:,i]
-        dx, dstats = $solver(A,nb; options...)
-        dxs[:,i] = dx
+        dAs[i] = Matrix(partials.(A, i))
     end
-    for i in 1:m
-        px[i] = Partials{N,V}(Tuple(dxs[i,j] for j in 1:N))
-    end
-    duals = Dual{T,V,N}.(x, px)
-    return (duals, stats)
-    end
+    return dAs
 end
 
-# function Krylov.cg(_A::SparseMatrixCSC{Dual{T, V, NA}, Int64}, _b::Vector{Dual{T, V, NB}}; options...) where {T, V, NA, NB}
-#   A = SparseMatrixCSC(_A.m, _A.n, _A.colptr, _A.rowval, value.(_A.nzval))
-#   dAs = Vector{SparseMatrixCSC{Float64, Int64}}(undef, NA)
-#   for i in 1:NA
-#     dAs[i] = SparseMatrixCSC(_A.m, _A.n, _A.colptr, _A.rowval, partials.(_A.nzval, i))
-#   end
-#   b = value.(_b)
-#   m = length(b)
-#   dbs = Matrix{V}(undef, m, NB)
-#   for i in 1:m
-#     dbs[i,:] = partials(_b[i])
-#   end
-#   x, stats = cg(A,b)
-#   dxs = Matrix{Float64}(undef, m, N)
-#   px = Vector{Partials{N,V}}(undef, n)
-#   for i in 1:N
-#     nb = dbs[:,i] - dAs[i]*x
-#     dx, dstats = cg(A[i],nb)
-#     dxs[:,i] = dx
-#   end
-#   for i in 1:m
-#       px[i] = Partials{N,V}(Tuple(dxs[i,j] for j in 1:N))
-#   end
-#   duals = Dual{T,V,N}.(x, px)
-#   return (duals, stats)
-# end
+
+for solver in (:cg, :gmres, :bicgstab)
+    for matrix in (:(SparseMatrixCSC{V, IT}), :(Matrix{V}))
+        @eval begin
+            function Krylov.$solver(A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N, IT}
+                b = value.(_b)
+                m = length(b)
+                dbs = Matrix{V}(undef, m, N)
+                for i in 1:m
+                    dbs[i,:] = partials(_b[i])
+                end
+                x, stats = $solver(A,b; options...)
+                dxs = Matrix{V}(undef, m, N)
+                px = Vector{Partials{N,V}}(undef, m)
+                for i in 1:N
+                    nb = dbs[:,i]
+                    dx, dstats = $solver(A,nb; options...)
+                    dxs[:,i] = dx
+                end
+                for i in 1:m
+                    px[i] = Partials{N,V}(Tuple(dxs[i,j] for j in 1:N))
+                end
+                duals = Dual{T,V,N}.(x, px)
+                return (duals, stats)
+            end
+        end
+    end
+
+    for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT}), :(Matrix{Dual{T,V,N}}))
+        @eval begin
+            function Krylov.$solver(_A::$matrix, b::Vector{V}; options...) where {T, V, N, IT}
+                A = _matrix_values(_A)
+                dAs = _matrix_partials(_A)
+                m = length(b)
+                x, stats = $solver(A,b)
+                dxs = Matrix{Float64}(undef, m, N)
+                px = Vector{Partials{N,V}}(undef, m)
+                for i in 1:N
+                    nb = - dAs[i]*x
+                    dx, dstats = $solver(A,nb)
+                    dxs[:,i] = dx
+                end
+                for i in 1:m
+                    px[i] = Partials{N,V}(Tuple(dxs[i,j] for j in 1:N))
+                end
+                duals = Dual{T,V,N}.(x, px)
+                return (duals, stats)
+            end
+        end
+    end
+
+    for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT}), :(Matrix{Dual{T,V,N}}))
+        @eval begin
+            function Krylov.$solver(_A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N, IT}
+                A = _matrix_values(_A)
+                dAs = _matrix_partials(_A)
+                b = value.(_b)
+                m = length(b)
+                dbs = Matrix{V}(undef, m, N)
+                for i in 1:m
+                    dbs[i,:] = partials(_b[i])
+                end
+                x, stats = $solver(A,b)
+                dxs = Matrix{Float64}(undef, m, N)
+                px = Vector{Partials{N,V}}(undef, m)
+                for i in 1:N
+                    nb = dbs[:,i] - dAs[i]*x
+                    dx, dstats = $solver(A,nb)
+                    dxs[:,i] = dx
+                end
+                for i in 1:m
+                    px[i] = Partials{N,V}(Tuple(dxs[i,j] for j in 1:N))
+                end
+                duals = Dual{T,V,N}.(x, px)
+                return (duals, stats)
+            end
+        end
+    end
+
 end
