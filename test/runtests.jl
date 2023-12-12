@@ -13,4 +13,7 @@ rtol = 0.0
     @testset "ForwardDiff" begin
         include("forwarddiff.jl")
     end
+    @testset "Enzyme" begin
+        include("enzymediff.jl")
+    end
 end
