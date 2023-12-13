@@ -45,3 +45,38 @@ for solver in (:cg, :bicgstab, :gmres)
 end
 
 export forward
+
+function augmented_primal(
+    config,
+    func::Const{typeof(Krylov.gmres)},
+    ret::Type{<:Duplicated},
+    _A::Union{Const, Duplicated},
+    _b::Union{Const, Duplicated}
+)
+    A = _A.val
+    b = _b.val
+    x, stats = Krylov.gmres(A,b)
+    bx = zeros(length(x))
+    bstats = deepcopy(stats)
+    if needs_primal(config)
+        return AugmentedReturn((x, stats), (bx, bstats), (A,x, Ref(bx)))
+    else
+        return AugmentedReturn(nothing, (bx, bstats), (A,x))
+    end
+end
+
+function reverse(
+    config,
+    ::Const{typeof(Krylov.gmres)},
+    dret,
+    tape,
+    _A,
+    _b
+)
+    (A,x,bx) = tape
+    _b.dval .= gmres(transpose(A), bx[])[1]
+    _A.dval .= -x .* _b.dval'
+    return (nothing, nothing)
+end
+
+export augmented_primal, reverse
