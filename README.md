@@ -9,11 +9,17 @@ eventually should enable numerical comparisons between discrete and continuous
 tangent and adjoint methods (see this
 [report](http://137.226.34.227/Publications/AIB/2012/2012-10.pdf)).
 
-## Current Limitations
+## Current Technical Limitations
 
 * Only supports `gmres`, `cg`, and `bicgstab` methods
 * No support for inplace methods `gmres!`, `cg!`, and `bicgstab!`
 * No support for options when using Enzyme
+* No support for sparse matrices using Enzyme
+* No support for linear operators
+
+## Current Open Questions
+* How to handle preconditioners?
+* How to set the options for the tangent/adjoint solve based on the options for the forward solve? For example `bicgtab` may return `NaN` for the tangents or adjoints.
 
 ## Installation
 
