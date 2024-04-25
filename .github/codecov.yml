@@ -1,7 +1,3 @@
-ignore:
-  - "ext/amdgpu_preconditioner.jl"
-  - "ext/amdgpu_wrapper.jl"
-  - "ext/ExaPFAMDGPUExt.jl"
 coverage:
   status:
     project:

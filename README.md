@@ -1,5 +1,5 @@
 # DiffKrylov
-[![][build-latest-img]][build-url] [![][codecov-latest-img]][codecov-latest-url]
+[![CI](https://github.com/JuliaSmoothOptimizers/DiffKrylov.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/JuliaSmoothOptimizers/DiffKrylov.jl/actions/workflows/ci.yml)
 
 DiffKrylov provides a differentiable API for
 [Krylov.jl](https://github.com/JuliaSmoothOptimizers/Krylov.jl) using
@@ -37,9 +37,3 @@ A = rand(64,64)
 b = rand(64)
 J = ForwardDiff.jacobian(x -> gmres(A, x)[1], b)
 ```
-
-[codecov-latest-img]: https://codecov.io/gh/JuliaSmoothOptimizers/DiffKrylov.jl/branch/main/graphs/badge.svg?branch=main
-[codecov-latest-url]: https://codecov.io/github/JuliaSmoothOptimizers/DiffKrylov.jl?branch=main
-
-[build-url]: https://github.com/JuliaSmoothOptimizers/DiffKrylov.jl/actions?query=workflow
-[build-latest-img]: https://github.com/JuliaSmoothOptimizers/DiffKrylov.jl/workflows/CI/badge.svg?branch=main
