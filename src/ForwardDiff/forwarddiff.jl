@@ -19,9 +19,9 @@ end
 
 
 for solver in (:cg, :bicgstab)
-    for matrix in (:(SparseMatrixCSC{V, IT}), :(Matrix{V}))
+    for matrix in (:(SparseMatrixCSC{V, IT} where {IT}), :(Matrix{V}))
         @eval begin
-            function Krylov.$solver(A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N, IT}
+            function Krylov.$solver(A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N}
                 b = value.(_b)
                 m = length(b)
                 dbs = Matrix{V}(undef, m, N)
@@ -45,9 +45,9 @@ for solver in (:cg, :bicgstab)
         end
     end
 
-    for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT}), :(Matrix{Dual{T,V,N}}))
+    for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT} where {IT}), :(Matrix{Dual{T,V,N}}))
         @eval begin
-            function Krylov.$solver(_A::$matrix, b::Vector{V}; options...) where {T, V, N, IT}
+            function Krylov.$solver(_A::$matrix, b::Vector{V}; options...) where {T, V, N}
                 A = _matrix_values(_A)
                 dAs = _matrix_partials(_A)
                 m = length(b)
@@ -68,9 +68,9 @@ for solver in (:cg, :bicgstab)
         end
     end
 
-    for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT}), :(Matrix{Dual{T,V,N}}))
+    for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT} where {IT}), :(Matrix{Dual{T,V,N}}))
         @eval begin
-            function Krylov.$solver(_A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N, IT}
+            function Krylov.$solver(_A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N}
                 A = _matrix_values(_A)
                 dAs = _matrix_partials(_A)
                 b = value.(_b)
@@ -98,9 +98,9 @@ for solver in (:cg, :bicgstab)
 
 end
 
-for matrix in (:(SparseMatrixCSC{V, IT}), :(Matrix{V}))
+for matrix in (:(SparseMatrixCSC{V, IT} where {IT}), :(Matrix{V}))
     @eval begin
-        function Krylov.gmres(A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N, IT}
+        function Krylov.gmres(A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N}
             b = value.(_b)
             m = length(b)
             dbs = Matrix{V}(undef, m, N)
@@ -123,9 +123,9 @@ for matrix in (:(SparseMatrixCSC{V, IT}), :(Matrix{V}))
     end
 end
 
-for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT}), :(Matrix{Dual{T,V,N}}))
+for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT} where {IT}), :(Matrix{Dual{T,V,N}}))
     @eval begin
-        function Krylov.gmres(_A::$matrix, b::Vector{V}; options...) where {T, V, N, IT}
+        function Krylov.gmres(_A::$matrix, b::Vector{V}; options...) where {T, V, N}
             A = _matrix_values(_A)
             dAs = _matrix_partials(_A)
             m = length(b)
@@ -149,9 +149,9 @@ for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT}), :(Matrix{Dual{T,V,N}}))
     end
 end
 
-for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT}), :(Matrix{Dual{T,V,N}}))
+for matrix in (:(SparseMatrixCSC{Dual{T,V,N}, IT} where {IT}), :(Matrix{Dual{T,V,N}}))
     @eval begin
-        function Krylov.gmres(_A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N, IT}
+        function Krylov.gmres(_A::$matrix, _b::Vector{Dual{T, V, N}}; options...) where {T, V, N}
             A = _matrix_values(_A)
             dAs = _matrix_partials(_A)
             b = value.(_b)
