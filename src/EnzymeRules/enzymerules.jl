@@ -155,7 +155,16 @@ for AMT in (:Matrix, :SparseMatrixCSC)
                 if verbose > 0
                     @info "($psolver, $pamt) reverse"
                 end
-                _b.dval .= Krylov.$solver(transpose(A), bx[]; M=M, N=N, verbose=verbose, options...)[1]
+                N = M
+                M = N
+                if isa(M, IncompleteLU.ILUFactorization)
+                    U = copy(M.U)
+                    L = copy(M.L)
+                    transpose!(U, M.L)
+                    transpose!(L, M.U)
+                    N = IncompleteLU.ILUFactorization(L, U)
+                end
+                _b.dval .= Krylov.$solver(adjoint(A), bx[]; M=M, N=N, verbose=verbose, options...)[1]
                 _A.dval .= -x .* _b.dval'
                 return (nothing, nothing)
             end
