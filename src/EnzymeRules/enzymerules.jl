@@ -12,9 +12,9 @@ for AMT in (:Matrix, :SparseMatrixCSC)
                 ret::Type{RT},
                 _A::Annotation{MT},
                 _b::Annotation{VT};
-                verbose = 0,
                 M = I,
                 N = I,
+                verbose = 0,
                 options...
             ) where {RT, MT <: $AMT, VT <: Vector}
                 psolver = $solver
@@ -155,14 +155,17 @@ for AMT in (:Matrix, :SparseMatrixCSC)
                 if verbose > 0
                     @info "($psolver, $pamt) reverse"
                 end
-                N = M
-                M = N
-                if isa(M, IncompleteLU.ILUFactorization)
+                if M == I
+                    nothing
+                elseif isa(M, IncompleteLU.ILUFactorization)
                     U = copy(M.U)
                     L = copy(M.L)
                     transpose!(U, M.L)
                     transpose!(L, M.U)
                     N = IncompleteLU.ILUFactorization(L, U)
+                    M = I
+                else
+                    error("Preconditioner not supported")
                 end
                 _b.dval .= Krylov.$solver(adjoint(A), bx[]; M=M, N=N, verbose=verbose, options...)[1]
                 _A.dval .= -x .* _b.dval'
