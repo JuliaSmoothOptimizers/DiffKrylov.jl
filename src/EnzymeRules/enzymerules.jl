@@ -155,20 +155,12 @@ for AMT in (:Matrix, :SparseMatrixCSC)
                 if verbose > 0
                     @info "($psolver, $pamt) reverse"
                 end
-                if M == I
-                    nothing
-                elseif isa(M, IncompleteLU.ILUFactorization)
-                    U = copy(M.U)
-                    L = copy(M.L)
-                    transpose!(U, M.L)
-                    transpose!(L, M.U)
-                    N = IncompleteLU.ILUFactorization(L, U)
-                    M = I
-                else
-                    error("Preconditioner not supported")
+                adjM = adjoint(N)
+                adjN = adjoint(M)
+                _b.dval .= Krylov.$solver(adjoint(A), bx[]; M=adjM, N=adjN, verbose=verbose, options...)[1]
+                if isa(_A, Duplicated)
+                    _A.dval .= -x .* _b.dval'
                 end
-                _b.dval .= Krylov.$solver(adjoint(A), bx[]; M=M, N=N, verbose=verbose, options...)[1]
-                _A.dval .= -x .* _b.dval'
                 return (nothing, nothing)
             end
         end
