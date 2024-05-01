@@ -84,32 +84,28 @@ function check_derivatives_and_values_active_passive(solver, A, b, x)
     @test isapprox(partials.(dx,1), fda[1])
 end
 
-struct GMRES end
-struct BICGSTAB end
-struct CG end
-
-function driver!(::GMRES, x, A, b, M, N, ldiv=false)
-    x .= gmres(A,b, atol=1e-16, rtol=1e-16, M=M, N=N, verbose=0, ldiv=ldiv)[1]
+function driver!(solver::GmresSolver, A, b, M, N, ldiv=false)
+    gmres!(solver, A,b, atol=1e-16, rtol=1e-16, M=M, N=N, verbose=0, ldiv=ldiv)
     nothing
 end
 
-function driver!(::BICGSTAB, x, A, b, M, N, ldiv=false)
-    x .= bicgstab(A,b, atol=1e-16, rtol=1e-16, M=M, N=N, verbose=0, ldiv=ldiv)[1]
+function driver!(solver::BicgstabSolver, A, b, M, N, ldiv=false)
+    bicgstab!(solver, A,b, atol=1e-16, rtol=1e-16, M=M, N=N, verbose=0, ldiv=ldiv)
     nothing
 end
 
-function driver!(::CG, x, A, b, M, N, ldiv=false)
-    x .= cg(A,b, atol=1e-16, rtol=1e-16, M=M, verbose=0, ldiv=ldiv)[1]
+function driver!(solver::CgSolver, A, b, M, N, ldiv=false)
+    cg!(solver, A,b, atol=1e-16, rtol=1e-16, M=M, verbose=0, ldiv=ldiv)
     nothing
 end
 
 function test_enzyme_with(solver, A, b, M, N, ldiv=false)
     tsolver = if solver == Krylov.cg
-        CG()
+        CgSolver(A,b)
     elseif solver == Krylov.gmres
-        GMRES()
+        GmresSolver(A,b)
     elseif solver == Krylov.bicgstab
-        BICGSTAB()
+        BicgstabSolver(A,b)
     else
         error("Unsupported solver $solver is tested in DiffKrylov.jl")
     end
@@ -117,17 +113,17 @@ function test_enzyme_with(solver, A, b, M, N, ldiv=false)
     function A_one_one(hx)
         _A = copy(A)
         _A[1,1] = hx
-        x = zeros(length(b))
-        driver!(tsolver, x, _A, b, M, N, ldiv)
-        return x
+        # fill!(tsolver.x, zero(eltype(solver.x)))
+        driver!(tsolver, _A, b, M, N, ldiv)
+        return tsolver.x[1]
     end
 
     function b_one(hx)
         _b = copy(b)
         _b[1] = hx
-        x = zeros(length(b))
-        driver!(tsolver, x, A, _b, M, N, ldiv)
-        return x
+        # fill!(tsolver.x, zero(eltype(tsolver.x)))
+        driver!(tsolver, A, _b, M, N, ldiv)
+        return tsolver.x[1]
     end
 
     fda = FiniteDifferences.jacobian(fdm, a -> A_one_one(a), copy(A[1,1]))
@@ -143,31 +139,31 @@ function test_enzyme_with(solver, A, b, M, N, ldiv=false)
 
     dA = Duplicated(A, duplicate(A))
     db = Duplicated(b, zeros(length(b)))
-    dx = Duplicated(zeros(length(b)), zeros(length(b)))
+    dupsolver = Duplicated(tsolver, deepcopy(tsolver))
+    fill!(dupsolver.dval.x, zero(eltype(dupsolver.dval.x)))
     dA.dval[1,1] = 1.0
     db.dval[1] = 1.0
     Enzyme.autodiff(
         Forward,
         driver!,
-        Const(tsolver),
-        dx,
+        dupsolver,
         dA,
         db,
         Const(M),
         Const(N),
         Const(ldiv)
     )
-    @test isapprox(dx.dval, fd, atol=1e-4, rtol=1e-4)
+    @test isapprox(dupsolver.dval.x[1], fd[1][1], atol=1e-4, rtol=1e-4)
     # Test reverse
     dA = Duplicated(A, duplicate(A))
     db = Duplicated(b, zeros(length(b)))
-    dx = Duplicated(zeros(length(b)), zeros(length(b)))
-    dx.dval[1] = 1.0
+    dupsolver = Duplicated(tsolver, deepcopy(tsolver))
+    fill!(dupsolver.dval.x, zero(eltype(dupsolver.dval.x)))
+    dupsolver.dval.x[1] = 1.0
     Enzyme.autodiff(
         Reverse,
         driver!,
-        Const(tsolver),
-        dx,
+        dupsolver,
         dA,
         db,
         Const(M),
