@@ -4,6 +4,41 @@ using .EnzymeRules
 
 export augmented_primal, reverse, forward
 
+const tol = 1e-8
+function custom_stopping_condition(solver::BicgstabSolver, A, b, r, tol)
+  mul!(r, A, solver.x)
+  r .-= b               # r := b - Ax
+  bool = norm(r) ≤ tol  # tolerance based on the 2-norm of the residual
+  return bool
+end
+
+
+function custom_stopping_condition(solver::GmresSolver, A, b, r, tol)
+    z = solver.z
+    k = solver.inner_iter
+    nr = sum(1:k)
+    V = solver.V
+    R = solver.R
+    y = copy(z)
+
+    # Solve Rk * yk = zk
+    for i = k : -1 : 1
+        pos = nr + i - k
+        for j = k : -1 : i+1
+        y[i] = y[i] - R[pos] * y[j]
+        pos = pos - j + 1
+        end
+        y[i] = y[i] / R[pos]
+    end
+
+    # xk = Vk * yk
+    xk = sum(V[i] * y[i] for i = 1:k)
+    mul!(r, A, xk)
+    r .-= b               # r := b - Ax
+    bool = norm(r) ≤ tol  # tolerance based on the 2-norm of the residual
+    return bool
+end
+
 for AMT in (:Matrix, :SparseMatrixCSC)
     for solver in (:bicgstab!, :gmres!)
         @eval begin
@@ -119,9 +154,14 @@ for AMT in (:Matrix, :SparseMatrixCSC)
                 if verbose > 0
                     @info "($psolver, $pamt) augmented forward"
                 end
+                r = similar(b.val)
+                krylov_callback(_solver) = custom_stopping_condition(_solver, A.val, b.val, r, options[:atol])
                 Krylov.$solver(
-                    solver.val, A.val,b.val;
-                    M=M, verbose=verbose, options...
+                    solver.val, A.val, b.val;
+                    # options...,
+                    ldiv=true,
+                    M=M, N=N, callback=krylov_callback,
+                    atol = eps(Float64), rtol = eps(Float64),
                 )
 
                 cache = (solver.val.x, A.val, verbose,M,N)
@@ -144,12 +184,20 @@ for AMT in (:Matrix, :SparseMatrixCSC)
                 if verbose > 0
                     @info "($psolver, $pamt) reverse"
                 end
-                adjM = adjoint(N)
-                adjN = adjoint(M)
+                adjM = adjoint(M)
+                adjN = adjoint(N)
+                r = similar(solver.dval.x)
+                b = deepcopy(solver.dval.x)
+                krylov_callback(_solver) = custom_stopping_condition(_solver, adjoint(A), b, r, options[:atol])
                 Krylov.$solver(
                     solver.dval,
-                    adjoint(A), copy(solver.dval.x); M=adjM, N=adjN,
-                    verbose=verbose, options...
+                    adjoint(A), b;
+                    # options...,
+                    ldiv=true,
+                    verbose=verbose,
+                    M=adjM, N=adjN,
+                    atol = eps(Float64), rtol = eps(Float64),
+                    callback=krylov_callback,
                 )
                 copyto!(_b.dval, solver.dval.x)
                 if isa(_A, Duplicated)
