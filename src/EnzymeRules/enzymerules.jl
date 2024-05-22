@@ -145,7 +145,7 @@ end
 
 
 for AMT in (:Matrix, :SparseMatrixCSC)
-    for solver in (:bicgstab!, :gmres!)
+    for solver in (:bicgstab!, :gmres!, :bilq!, :qmr!)
         @eval begin
             function augmented_primal(
                 config,
