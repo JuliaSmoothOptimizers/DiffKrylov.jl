@@ -1,6 +1,6 @@
-A, b = sparse_laplacian(4, FC=Float64)
-@testset "$solver" for solver = (Krylov.cg, Krylov.gmres, Krylov.bicgstab)
-    x, stats = solver(A,b; atol=atol, rtol=rtol)
+A, b = sparse_laplacian(4, FC = Float64)
+@testset "$solver" for solver in (Krylov.cg, Krylov.gmres, Krylov.bicgstab)
+    x, stats = solver(A, b; atol = atol, rtol = rtol)
 
     # A passive, b active
     # Sparse

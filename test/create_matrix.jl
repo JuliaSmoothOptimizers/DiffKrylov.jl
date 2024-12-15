@@ -12,7 +12,7 @@ function create_unsymmetric_matrix(n)
 
     # Modify the singular values to make them close to each other but not too small
     # Here we set them all to be between 1 and 2
-    S = Diagonal(range(1, stop=2, length=n))
+    S = Diagonal(range(1, stop = 2, length = n))
 
     # Reconstruct the matrix
     well_conditioned_matrix = U * S * V'
